@@ -8,7 +8,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TIO
 import           System.IO     ( stderr )
 
-import           Data.PQL.PQL  ( parse )
+import           Data.PQL.PQL  ( parse, format )
 
 
 main :: IO ()
@@ -19,6 +19,6 @@ main = do
   handle line =
     case parse line of
       Just success ->
-        TIO.putStrLn $ TL.pack $ show success
+        TIO.putStrLn $ format success
       Nothing ->
         TIO.hPutStrLn stderr $  "FAILED: " `TL.append` line
