@@ -12,7 +12,7 @@ import           Control.Monad ( when, unless )
 import           Data.Char     ( isAlphaNum )
 import           Data.Monoid   ( (<>), mempty, mconcat )
 import           Data.Functor  ( ($>) )
-import           Data.List     ( intersperse )
+import           Data.List     ( intersperse, sortBy )
 import qualified Data.Attoparsec.Text.Lazy as AL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -99,6 +99,19 @@ condition =
   (AL.char '(' *> group) <|> parseCond
 
 
+orderValue :: Condition -> Condition -> Ordering
+orderValue (Cond a _ _) (Cond b _ _) =
+  compare a b
+orderValue Cond {} _      = LT
+orderValue _ Cond {}      = GT
+orderValue (And _) (Or _) = LT
+orderValue (Or _) (And _) = GT
+orderValue (And as) (And as') =
+  compare (length as) (length as')
+orderValue (Or os) (Or os') =
+  compare (length os) (length os')
+
+
 group :: AL.Parser Condition
 group = do
   (comb, cs) <- collect Nothing []
@@ -107,9 +120,11 @@ group = do
       if null cs
       then fail "empty input"
       else return $ head cs
-    Just CAnd -> return $ And cs
-    Just COr -> return $ Or cs
+    Just CAnd -> return $ And $ order cs
+    Just COr -> return $ Or $ order cs
  where
+  order = sortBy orderValue
+
   collect :: Maybe Comb -> [Condition] -> AL.Parser (Maybe Comb, [Condition])
   collect op cs = do
     AL.skipSpace
