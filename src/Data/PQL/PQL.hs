@@ -20,9 +20,16 @@ import qualified Data.Text.Lazy.Builder as TLB
 
 
 data Condition
-  = Cond T.Text Op T.Text
+  = Cond T.Text Op Value
   | And [Condition]
   | Or [Condition]
+  deriving ( Show, Eq )
+
+
+data Value
+  = Val T.Text
+  | Num Double
+  | Bl Bool
   deriving ( Show, Eq )
 
 
@@ -47,7 +54,7 @@ format' :: Condition -> TLB.Builder
 format' (Cond attr op val) =
   let attr' = TLB.fromText attr
       op'   = formatOp op
-      val'  = TLB.fromText val
+      val'  = formatVal val
   in  attr' <> " " <> op' <> " " <> val'
 format' (And cs) =
   let cs' = intersperse " and " (map format' cs)
@@ -55,6 +62,12 @@ format' (And cs) =
 format' (Or cs) =
   let cs' = intersperse " or " (map format' cs)
   in  "(" <> mconcat cs' <> ")"
+
+
+formatVal (Val txt)  = "'" <> TLB.fromText txt <> "'"
+formatVal (Bl True)  = "true"
+formatVal (Bl False) = "false"
+formatVal (Num num)  = TLB.fromString $ show num
 
 
 formatOp :: Op -> TLB.Builder
@@ -149,14 +162,14 @@ parseCond =
     return $ Cond attr op val
 
 
-parseValue :: AL.Parser T.Text
+parseValue :: AL.Parser Value
 parseValue =
   number <|> bool <|> value
  where
-  number = T.pack . show <$> AL.double
-  bool   = "true" <|> "false"
+  number = Num <$> AL.double
+  bool   = (Bl True <$ "true") <|> (Bl False <$ "false")
   -- TODO: escape quotes
-  value  = AL.char '\'' *> AL.takeWhile1 (/= '\'') <* AL.char '\''
+  value  = Val <$> (AL.char '\'' *> AL.takeWhile1 (/= '\'') <* AL.char '\'')
 
 
 parseOp :: AL.Parser Op
