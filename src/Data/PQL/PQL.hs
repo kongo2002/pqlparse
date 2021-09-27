@@ -49,21 +49,26 @@ data Comb = CAnd | COr deriving ( Eq )
 
 
 format :: Condition -> TL.Text
-format = TLB.toLazyText . format'
+format = TLB.toLazyText . format' True
 
 
-format' :: Condition -> TLB.Builder
-format' (Cond attr op val) =
+format' :: Bool -> Condition -> TLB.Builder
+format' _ (Cond attr op val) =
   let attr' = TLB.fromText attr
       op'   = formatOp op
       val'  = formatVal val
   in  attr' <> " " <> op' <> " " <> val'
-format' (And cs) =
-  let cs' = intersperse " and " (map format' cs)
-  in  "(" <> mconcat cs' <> ")"
-format' (Or cs) =
-  let cs' = intersperse " or " (map format' cs)
-  in  "(" <> mconcat cs' <> ")"
+format' topLevel (And cs) =
+  let cs' = intersperse " and " (map (format' False) cs)
+  in  wrap topLevel cs'
+format' topLevel (Or cs) =
+  let cs' = intersperse " or " (map (format' False) cs)
+  in  wrap topLevel cs'
+
+
+wrap :: Bool -> [TLB.Builder] -> TLB.Builder
+wrap False parts = "(" <> mconcat parts <> ")"
+wrap True parts  = mconcat parts
 
 
 formatVal (Val txt)  = "'" <> TLB.fromText txt <> "'"
