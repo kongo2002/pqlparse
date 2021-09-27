@@ -4,6 +4,8 @@ module Data.PQL.PQL
     ( parse
     , format
     , Condition(..)
+    , Op(..)
+    , Value(..)
     ) where
 
 
@@ -30,7 +32,7 @@ data Value
   = Val T.Text
   | Num Double
   | Bl Bool
-  deriving ( Show, Eq )
+  deriving ( Show, Eq, Ord )
 
 
 data Op
@@ -100,8 +102,8 @@ condition =
 
 
 orderValue :: Condition -> Condition -> Ordering
-orderValue (Cond a _ _) (Cond b _ _) =
-  compare a b
+orderValue (Cond a1 _ v1) (Cond a2 _ v2) =
+  mconcat [compare a1 a2, compare v1 v2]
 orderValue Cond {} _      = LT
 orderValue _ Cond {}      = GT
 orderValue (And _) (Or _) = LT
@@ -112,6 +114,24 @@ orderValue (Or os) (Or os') =
   compare (length os) (length os')
 
 
+order :: Condition -> Condition
+order (And as) = And (sortBy orderValue as)
+order (Or as)  = Or (sortBy orderValue as)
+order cond     = cond
+
+
+simplify :: Condition -> Condition
+simplify c@Cond {} = c
+simplify (And vs) =
+  let collect (And as) xs = as ++ xs
+      collect x xs        = x : xs
+  in And $ foldr collect [] vs
+simplify (Or vs) =
+  let collect (Or os) xs = os ++ xs
+      collect x xs       = x : xs
+  in Or $ foldr collect [] vs
+
+
 group :: AL.Parser Condition
 group = do
   (comb, cs) <- collect Nothing []
@@ -120,10 +140,10 @@ group = do
       if null cs
       then fail "empty input"
       else return $ head cs
-    Just CAnd -> return $ And $ order cs
-    Just COr -> return $ Or $ order cs
+    Just CAnd -> return $ prepare $ And cs
+    Just COr -> return $ prepare $ Or cs
  where
-  order = sortBy orderValue
+  prepare = order . simplify
 
   collect :: Maybe Comb -> [Condition] -> AL.Parser (Maybe Comb, [Condition])
   collect op cs = do
