@@ -3,6 +3,7 @@
 module Data.PQL.PQL
     ( parse
     , format
+    , explode
     , Condition(..)
     , Op(..)
     , Value(..)
@@ -84,6 +85,30 @@ formatOp Less      = "lt"
 formatOp LessTE    = "lte"
 formatOp Is        = "is"
 formatOp IsNot     = "isnot"
+
+
+-- we want so explode expressions like these:
+--
+--   (a AND b) OR c
+--
+-- into:
+--
+--   (a OR c) AND (b OR c)
+explode :: Condition -> Condition
+explode (Or vs) = explodeOr vs
+explode expr    = expr
+
+
+explodeOr :: [Condition] -> Condition
+explodeOr [ex, And as] = explodeOr' ex as
+explodeOr [And as, ex] = explodeOr' ex as
+explodeOr expr         = Or expr
+
+
+explodeOr' :: Condition -> [Condition] -> Condition
+explodeOr' ex ands =
+  let convert subExpr = Or [ex, subExpr]
+  in  And $ map convert ands
 
 
 flipOp :: Op -> Op
