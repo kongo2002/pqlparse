@@ -37,7 +37,7 @@ convert lines =
         TIO.hPutStrLn stderr $  "FAILED: " `TL.append` line
 
 
-algoliaSupported :: Condition -> Bool
+algoliaSupported :: Expression -> Bool
 algoliaSupported Cond {} = True
 algoliaSupported (And vs) =
   all algoliaSupported vs
@@ -101,17 +101,17 @@ hasResolve' _                = False
 
 
 updateResolve :: T.Text
-              -> Condition
-              -> M.Map T.Text Condition
-              -> M.Map T.Text Condition
+              -> Expression
+              -> M.Map T.Text Expression
+              -> M.Map T.Text Expression
 updateResolve path cond m =
   let cond' = tryResolve cond m
   in  M.insert path cond' m
 
 
-tryResolve :: Condition
-           -> M.Map T.Text Condition
-           -> Condition
+tryResolve :: Expression
+           -> M.Map T.Text Expression
+           -> Expression
 tryResolve x@(Cond attr op (Val v)) m
   | attr == pathAttr && op == Is =
     tryResolve' v x m
@@ -128,7 +128,7 @@ tryResolve (Or vs) m =
 tryResolve cond _ = cond
 
 
-tryResolve' :: T.Text -> Condition -> M.Map T.Text Condition -> Condition
+tryResolve' :: T.Text -> Expression -> M.Map T.Text Expression -> Expression
 tryResolve' path cond m =
   fromMaybe cond $ M.lookup path' m
  where

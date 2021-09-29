@@ -4,7 +4,7 @@ module Data.PQL.PQL
     ( parse
     , format
     , explode
-    , Condition(..)
+    , Expression(..)
     , Op(..)
     , Value(..)
     ) where
@@ -22,10 +22,10 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
 
 
-data Condition
+data Expression
   = Cond T.Text Op Value
-  | And [Condition]
-  | Or [Condition]
+  | And [Expression]
+  | Or [Expression]
   deriving ( Show, Eq )
 
 
@@ -49,11 +49,11 @@ data Op
 data Comb = CAnd | COr deriving ( Eq )
 
 
-format :: Condition -> TL.Text
+format :: Expression -> TL.Text
 format = TLB.toLazyText . format' True
 
 
-format' :: Bool -> Condition -> TLB.Builder
+format' :: Bool -> Expression -> TLB.Builder
 format' _ (Cond attr op val) =
   let attr' = TLB.fromText attr
       op'   = formatOp op
@@ -94,18 +94,18 @@ formatOp IsNot     = "isnot"
 -- into:
 --
 --   (a OR c) AND (b OR c)
-explode :: Condition -> Condition
+explode :: Expression -> Expression
 explode (Or vs) = explodeOr vs
 explode expr    = expr
 
 
-explodeOr :: [Condition] -> Condition
+explodeOr :: [Expression] -> Expression
 explodeOr [ex, And as] = explodeOr' ex as
 explodeOr [And as, ex] = explodeOr' ex as
 explodeOr expr         = Or expr
 
 
-explodeOr' :: Condition -> [Condition] -> Condition
+explodeOr' :: Expression -> [Expression] -> Expression
 explodeOr' ex ands =
   let convert subExpr = Or [ex, subExpr]
   in  And $ map convert ands
@@ -119,19 +119,19 @@ flipOp LessTE    = Greater
 flipOp op        = op
 
 
-parse :: TL.Text -> Maybe Condition
+parse :: TL.Text -> Maybe Expression
 parse input =
   case AL.parse group input of
     AL.Fail {}    -> Nothing
     AL.Done _ res -> Just res
 
 
-condition :: AL.Parser Condition
+condition :: AL.Parser Expression
 condition =
   (AL.char '(' *> group) <|> parseCond
 
 
-orderValue :: Condition -> Condition -> Ordering
+orderValue :: Expression -> Expression -> Ordering
 orderValue (Cond a1 _ v1) (Cond a2 _ v2) =
   mconcat [compare a1 a2, compare v1 v2]
 orderValue Cond {} _      = LT
@@ -144,13 +144,13 @@ orderValue (Or os) (Or os') =
   compare (length os) (length os')
 
 
-order :: Condition -> Condition
+order :: Expression -> Expression
 order (And as) = And (sortBy orderValue as)
 order (Or as)  = Or (sortBy orderValue as)
 order cond     = cond
 
 
-simplify :: Condition -> Condition
+simplify :: Expression -> Expression
 simplify c@Cond {} = c
 simplify (And vs) =
   let collect (And as) xs = as ++ xs
@@ -162,7 +162,7 @@ simplify (Or vs) =
   in Or $ foldr collect [] vs
 
 
-group :: AL.Parser Condition
+group :: AL.Parser Expression
 group = do
   (comb, cs) <- collect Nothing []
   case comb of
@@ -175,7 +175,7 @@ group = do
  where
   prepare = order . simplify
 
-  collect :: Maybe Comb -> [Condition] -> AL.Parser (Maybe Comb, [Condition])
+  collect :: Maybe Comb -> [Expression] -> AL.Parser (Maybe Comb, [Expression])
   collect op cs = do
     AL.skipSpace
     atEnd <- isEnd
@@ -204,7 +204,7 @@ group = do
   ops = ("and" $> CAnd) <|> ("or" $> COr)
 
 
-parseCond :: AL.Parser Condition
+parseCond :: AL.Parser Expression
 parseCond =
   cond' <|> cond''
  where
