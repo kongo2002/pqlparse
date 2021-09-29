@@ -4,6 +4,7 @@ module Data.PQL.PQL
     ( parse
     , format
     , explode
+    , simplify
     , Expression(..)
     , Op(..)
     , Value(..)
@@ -15,7 +16,7 @@ import           Control.Monad ( when, unless )
 import           Data.Char     ( isAlphaNum )
 import           Data.Monoid   ( (<>), mempty, mconcat )
 import           Data.Functor  ( ($>) )
-import           Data.List     ( intersperse, sortBy )
+import           Data.List     ( intersperse, partition, sortBy )
 import qualified Data.Attoparsec.Text.Lazy as AL
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -94,21 +95,35 @@ formatOp IsNot     = "isnot"
 -- into:
 --
 --   (a OR c) AND (b OR c)
+explode0 :: Expression -> Expression
+explode0 (Or vs)  = explodeOr vs
+explode0 (And vs) = And (map explode0 vs)
+explode0 expr     = expr
+
+
 explode :: Expression -> Expression
-explode (Or vs) = explodeOr vs
-explode expr    = expr
+explode expr
+  | expr /= expr0 = explode expr0
+  | otherwise     = expr0
+ where
+  expr0 = explode0 expr
 
 
 explodeOr :: [Expression] -> Expression
-explodeOr [ex, And as] = explodeOr' ex as
-explodeOr [And as, ex] = explodeOr' ex as
-explodeOr expr         = Or expr
+explodeOr =
+  explodeOr' . partition isAnd
+ where
+  isAnd And {} = True
+  isAnd _      = False
 
 
-explodeOr' :: Expression -> [Expression] -> Expression
-explodeOr' ex ands =
-  let convert subExpr = Or [ex, subExpr]
-  in  And $ map convert ands
+explodeOr' :: ([Expression], [Expression]) -> Expression
+explodeOr' ([], rest) = Or rest
+explodeOr' (and:ands, rest) =
+  And $ withOrs and
+ where
+  withOrs (And as) = map withOrs' as
+  withOrs'         = Or . (: rest ++ ands)
 
 
 flipOp :: Op -> Op
@@ -150,16 +165,24 @@ order (Or as)  = Or (sortBy orderValue as)
 order cond     = cond
 
 
-simplify :: Expression -> Expression
-simplify c@Cond {} = c
-simplify (And vs) =
+simplify0 :: Expression -> Expression
+simplify0 c@Cond {} = c
+simplify0 (And vs) =
   let collect (And as) xs = as ++ xs
       collect x xs        = x : xs
   in And $ foldr collect [] vs
-simplify (Or vs) =
+simplify0 (Or vs) =
   let collect (Or os) xs = os ++ xs
       collect x xs       = x : xs
   in Or $ foldr collect [] vs
+
+
+simplify :: Expression -> Expression
+simplify expr
+  | expr /= expr0 = simplify expr0
+  | otherwise     = expr0
+ where
+  expr0 = simplify0 expr
 
 
 group :: AL.Parser Expression
