@@ -134,16 +134,22 @@ flipOp LessTE    = Greater
 flipOp op        = op
 
 
-parse :: TL.Text -> Maybe Expression
+parse :: TL.Text -> Either String Expression
 parse input =
-  case AL.parse group input of
-    AL.Fail {}    -> Nothing
-    AL.Done _ res -> Just res
+  AL.eitherResult $ AL.parse group input
 
 
 condition :: AL.Parser Expression
 condition =
-  (AL.char '(' *> group) <|> parseCond
+  parseCond' <|> ((AL.char '(' AL.<?> "expecting condition") *> group)
+ where
+  -- we are trying to parse the condition like this
+  -- before the group for a better error message when
+  -- `group` fails with invalid condition groups
+  parseCond' = do
+    chr <- AL.peekChar'
+    when (chr == '(') $ fail "group expected"
+    parseCond
 
 
 orderValue :: Expression -> Expression -> Ordering

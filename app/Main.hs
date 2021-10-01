@@ -31,10 +31,12 @@ convert lines =
  where
   handle line =
     case parse line of
-      Just success ->
+      Right success ->
         TIO.putStrLn $ format success
-      Nothing ->
-        TIO.hPutStrLn stderr $  "FAILED: " `TL.append` line
+      Left msg ->
+        let err  = TL.pack msg
+            err' = "FAILED: " <> err <> ": " <> line
+        in  TIO.hPutStrLn stderr err'
 
 
 algoliaSupported :: Expression -> Bool
@@ -48,6 +50,14 @@ algoliaSupported (Or vs) =
   isAnd _       = False
 
   valid x = not (isAnd x) && algoliaSupported x
+
+
+countExpr :: Expression -> Int
+countExpr Cond {} = 1
+countExpr (And as) =
+  foldr (\a cnt -> countExpr a + cnt) 0 as
+countExpr (Or os) =
+  foldr (\o cnt -> countExpr o + cnt) 0 os
 
 
 resolve :: [TL.Text] -> IO ()
@@ -73,15 +83,17 @@ resolve lines = do
 
   parse' (path, pql) =
     case parse pql of
-      Just parsed -> Just (path, parsed)
-      Nothing -> Nothing
+      Right parsed -> Just (path, parsed)
+      _ -> Nothing
 
   output (path, cond) = do
     TI.putStr path
     TI.putStr ","
     TIO.putStr $ format cond
     TI.putStr ","
-    TI.putStrLn supported
+    TI.putStr supported
+    TI.putStr ","
+    print $ countExpr cond
    where
     supported =
       if algoliaSupported cond
