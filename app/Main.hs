@@ -5,10 +5,11 @@ module Main where
 
 import           Control.Monad      ( forM_, (>=>) )
 import           Data.Maybe         ( fromMaybe, mapMaybe )
+import           Data.List          ( intersperse, nub )
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-import qualified Data.Text.IO as TI
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Text.Lazy.IO as TIO
 import           System.IO          ( stderr )
 import           System.Environment ( getArgs )
@@ -44,12 +45,22 @@ algoliaSupported Cond {} = True
 algoliaSupported (And vs) =
   all algoliaSupported vs
 algoliaSupported (Or vs) =
-  all valid vs
+  all valid vs && sameCondType
  where
   isAnd (And _) = True
   isAnd _       = False
 
   valid x = not (isAnd x) && algoliaSupported x
+
+  sameCondType =
+    let types = nub $ mapMaybe condType vs
+    in  length types < 2
+
+  -- OR must not contain different types of filter categories
+  -- (e.g. numerical and facets)
+  condType (Cond _ _ (Num _)) = Just 1
+  condType (Cond _ _ (Val _)) = Just 2
+  condType _ = Nothing
 
 
 countExpr :: Expression -> Int
@@ -87,18 +98,19 @@ resolve lines = do
       _ -> Nothing
 
   output (path, cond) = do
-    TI.putStr path
-    TI.putStr ","
-    TIO.putStr $ format cond
-    TI.putStr ","
-    TI.putStr supported
-    TI.putStr ","
-    print $ countExpr cond
+    TIO.putStrLn $ TLB.toLazyText $ mconcat parts
    where
     supported =
       if algoliaSupported cond
       then "OK"
       else "INVALID"
+
+    parts = intersperse ","
+      [ TLB.fromText path
+      , TLB.fromLazyText $ format cond
+      , supported
+      , TLB.fromString $ show $ countExpr cond
+      ]
 
 
 hasResolve :: IO Bool
