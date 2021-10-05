@@ -80,9 +80,11 @@ resolve lines = do
         extract (path : pql : _) =
           Just (pathName (TL.toStrict path), pql)
         extract _ = Nothing
+
         convert = extract . parts >=> parse'
         original = M.fromList $ mapMaybe convert lines
-    in  resolveUntil original
+        resolved = resolveUntil original
+    in  M.map simplify' resolved
 
   -- TODO: brute-force attempt to re-resolve the current expression
   resolveUntil m =
@@ -91,6 +93,12 @@ resolve lines = do
     else resolved
    where
     resolved = M.foldrWithKey' updateResolve m m
+
+  simplify' expr
+    | expr /= expr' = simplify' expr'
+    | otherwise     = expr'
+   where
+    expr' = simplify $ explode expr
 
   parse' (path, pql) =
     case parse pql of

@@ -175,11 +175,11 @@ simplify0 :: Expression -> Expression
 simplify0 c@Cond {} = c
 simplify0 (And vs) =
   let collect (And as) xs = as ++ xs
-      collect x xs        = x : xs
+      collect x xs        = simplify0 x : xs
   in And $ foldr collect [] vs
 simplify0 (Or vs) =
   let collect (Or os) xs = os ++ xs
-      collect x xs       = x : xs
+      collect x xs       = simplify0 x : xs
   in Or $ foldr collect [] vs
 
 
