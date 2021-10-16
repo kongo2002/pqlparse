@@ -32,6 +32,7 @@ formatJSON' _ (Cond attr op val) =
     , kv "value" (value val)
     , kv "compare" (comp op)
     , kv "type" (type' val)
+    , str "children" <> ":" <> "[]"
     ]
 
   comp Is        = "="
