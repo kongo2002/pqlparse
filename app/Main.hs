@@ -21,8 +21,11 @@ import           Data.PQL.Parser
 import           Data.PQL.Types
 
 
+type Formatter = T.Text -> Expression -> TL.Text
+
+
 data Options = Options
-  { oOutput       :: Expression -> TL.Text
+  { oOutput       :: Formatter
   , oOutputFormat :: String
   , oResolve      :: Bool
   }
@@ -30,10 +33,24 @@ data Options = Options
 
 defOptions :: Options
 defOptions = Options
-  { oOutput       = formatCSV
+  { oOutput       = toCSV
   , oOutputFormat = "csv"
   , oResolve      = False
   }
+
+
+toCSV :: Formatter
+toCSV name expr
+  | T.null name = formatCSV expr
+  | otherwise =
+    TL.fromStrict name <> "," <> formatCSV expr
+
+
+toJSON :: Formatter
+toJSON name expr
+  | T.null name = formatJSON expr
+  | otherwise =
+    "{\"id\":\"" <> TL.fromStrict name <> "\",\"queries\":" <> formatJSON expr <> "}"
 
 
 options :: [ OptDescr (Options -> IO Options) ]
@@ -73,8 +90,8 @@ parseOpts args =
             in  hPutStrLn stderr msg' >> exitFailure
 
   validateOpts opts
-    | fmt == "json" = return $ opts { oOutput = formatJSON }
-    | fmt == "csv" = return $ opts { oOutput = formatCSV }
+    | fmt == "json" = return $ opts { oOutput = toJSON }
+    | fmt == "csv" = return $ opts { oOutput = toCSV }
     | otherwise = err $ "invalid output: " ++ fmt
    where
     fmt = oOutputFormat opts
@@ -85,18 +102,18 @@ main = do
   opts <- parseOpts =<< getArgs
   lines <- TL.lines <$> TIO.getContents
   if oResolve opts
-  then resolve lines
+  then resolve lines (oOutput opts)
   else convert lines (oOutput opts)
 
 
-convert :: [TL.Text] -> (Expression -> TL.Text) -> IO ()
+convert :: [TL.Text] -> Formatter -> IO ()
 convert lines output =
   forM_ lines handle
  where
   handle line =
     case parse line of
       Right success ->
-        TIO.putStrLn $ output success
+        TIO.putStrLn $ output "" success
       Left msg ->
         let err  = TL.pack msg
             err' = "FAILED: " <> err <> ": " <> line
@@ -134,8 +151,8 @@ countExpr (Or os) =
   foldr (\o cnt -> countExpr o + cnt) 0 os
 
 
-resolve :: [TL.Text] -> IO ()
-resolve lines = do
+resolve :: [TL.Text] -> Formatter -> IO ()
+resolve lines format =
   forM_ (M.toList lines') output
  where
   lines' =
@@ -168,21 +185,17 @@ resolve lines = do
       Right parsed -> Just (path, parsed)
       _ -> Nothing
 
-  output (path, cond) = do
-    TIO.putStrLn $ TLB.toLazyText $ mconcat parts
+  output (path, cond) =
+    TIO.putStrLn $ format path cond'
    where
     cond' = simplify' cond
-    supported =
-      if algoliaSupported cond'
-      then "OK"
-      else "INVALID"
 
-    parts = intersperse ","
-      [ TLB.fromText path
-      , TLB.fromLazyText $ format cond
-      , supported
-      , TLB.fromString $ show $ countExpr cond
-      ]
+
+simplify' expr
+  | expr /= expr' = simplify' expr'
+  | otherwise     = expr'
+ where
+  expr' = simplify $ explode expr
 
 
 updateResolve :: T.Text
