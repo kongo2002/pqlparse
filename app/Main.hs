@@ -108,8 +108,9 @@ resolve lines = do
   output (path, cond) = do
     TIO.putStrLn $ TLB.toLazyText $ mconcat parts
    where
+    cond' = simplify' cond
     supported =
-      if algoliaSupported cond
+      if algoliaSupported cond'
       then "OK"
       else "INVALID"
 
