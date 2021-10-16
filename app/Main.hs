@@ -11,31 +11,92 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Text.Lazy.IO as TIO
-import           System.IO          ( stderr )
+import           System.Console.GetOpt
 import           System.Environment ( getArgs )
+import           System.Exit        ( exitFailure, exitSuccess )
+import           System.IO          ( hPutStrLn, stderr )
 
-import           Data.PQL.Output ( formatCSV )
+import           Data.PQL.Output ( formatCSV, formatJSON )
 import           Data.PQL.Parser
 import           Data.PQL.Types
 
 
+data Options = Options
+  { oOutput       :: Expression -> TL.Text
+  , oOutputFormat :: String
+  , oResolve      :: Bool
+  }
+
+
+defOptions :: Options
+defOptions = Options
+  { oOutput       = formatCSV
+  , oOutputFormat = "csv"
+  , oResolve      = False
+  }
+
+
+options :: [ OptDescr (Options -> IO Options) ]
+options =
+  [ Option "o" ["output"]
+    (ReqArg (\fmt opt -> return $ opt { oOutputFormat = fmt }) "FORMAT")
+    "output format"
+  , Option "r" ["resolve"]
+    (NoArg (\opt -> return opt { oResolve = True }))
+    "resolve path expressions"
+  , Option "h" ["help"]
+    (NoArg (\_ -> putStr usage >> exitSuccess))
+    "show this help"
+  ]
+
+
+usage :: String
+usage = usageInfo header options
+ where
+  header = unlines
+    [ "Usage: pqlparse [OPTIONS]"
+    , ""
+    , "pqlparse parses input from stdin and outputs to stdout"
+    ]
+
+
+parseOpts :: [String] -> IO Options
+parseOpts args =
+  case getOpt Permute options args of
+    -- successful
+    (o, ps, []) ->
+      foldl (>>=) (return defOptions) o >>= validateOpts
+    -- errors
+    (_, _, es) -> err $ concat es
+ where
+  err msg = let msg' = "error: " ++ msg ++ "\n\n" ++ usage
+            in  hPutStrLn stderr msg' >> exitFailure
+
+  validateOpts opts
+    | fmt == "json" = return $ opts { oOutput = formatJSON }
+    | fmt == "csv" = return $ opts { oOutput = formatCSV }
+    | otherwise = err $ "invalid output: " ++ fmt
+   where
+    fmt = oOutputFormat opts
+
+
 main :: IO ()
 main = do
-  isResolve <- hasResolve
+  opts <- parseOpts =<< getArgs
   lines <- TL.lines <$> TIO.getContents
-  if isResolve
+  if oResolve opts
   then resolve lines
-  else convert lines
+  else convert lines (oOutput opts)
 
 
-convert :: [TL.Text] -> IO ()
-convert lines =
+convert :: [TL.Text] -> (Expression -> TL.Text) -> IO ()
+convert lines output =
   forM_ lines handle
  where
   handle line =
     case parse line of
       Right success ->
-        TIO.putStrLn $ formatCSV success
+        TIO.putStrLn $ output success
       Left msg ->
         let err  = TL.pack msg
             err' = "FAILED: " <> err <> ": " <> line
@@ -122,17 +183,6 @@ resolve lines = do
       , supported
       , TLB.fromString $ show $ countExpr cond
       ]
-
-
-hasResolve :: IO Bool
-hasResolve =
-  hasResolve' `fmap` getArgs
-
-
-hasResolve' :: [String] -> Bool
-hasResolve' ("-r": _)        = True
-hasResolve' ("--resolve": _) = True
-hasResolve' _                = False
 
 
 updateResolve :: T.Text
