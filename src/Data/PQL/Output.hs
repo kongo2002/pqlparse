@@ -2,6 +2,7 @@
 
 module Data.PQL.Output
   ( formatCSV
+  , formatJSON
   ) where
 
 
@@ -10,6 +11,74 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
 
 import Data.PQL.Types
+
+
+formatJSON :: Expression -> TL.Text
+formatJSON expr =
+  TLB.toLazyText formatted'
+ where
+  formatted = formatJSON' True expr
+  formatted' = "[" <> formatted <> "]"
+
+
+formatJSON' :: Bool -> Expression -> TLB.Builder
+formatJSON' _ (Cond attr op val) =
+  "{" <> obj <> "}"
+ where
+  obj = mconcat $ intersperse "," parts
+
+  parts =
+    [ kv "attr" (TLB.fromText attr)
+    , kv "value" (value val)
+    , kv "compare" (comp op)
+    , kv "type" (type' val)
+    ]
+
+  comp Is        = "="
+  comp IsNot     = "!="
+  comp Greater   = ">"
+  comp GreaterTE = ">="
+  comp Less      = "<"
+  comp LessTE    = "<="
+
+  -- TODO: escaping?
+  value (Val v)    = TLB.fromText v
+  value (Num d)    = TLB.fromString (show d)
+  value (Bl True)  = "true"
+  value (Bl False) = "false"
+
+  type' (Val _) = "string"
+  type' (Num _) = "number"
+  type' (Bl _)  = "bool"
+
+formatJSON' _ (Or vs) =
+  "{" <> parts <> "}"
+ where
+  parts = mconcat $ intersperse ","
+    [ kv "attr" ""
+    , kv "value" ""
+    , kv "compare" ""
+    , kv "type" "or"
+    , str "children" <> ":" <> "[" <> mconcat (intersperse "," (map (formatJSON' False) vs )) <> "]"
+    ]
+
+formatJSON' False (And vs) =
+  "{" <> parts <> "}"
+ where
+  parts = mconcat $ intersperse ","
+    [ kv "attr" ""
+    , kv "value" ""
+    , kv "compare" ""
+    , kv "type" "and"
+    , str "children" <> ":" <> "[" <> mconcat (intersperse "," (map (formatJSON' False) vs )) <> "]"
+    ]
+
+formatJSON' True (And vs) =
+  mconcat $ intersperse "," (map (formatJSON' False) vs)
+
+
+str val = "\"" <> val <> "\""
+kv key value = str key <> ":" <> str value
 
 
 formatCSV :: Expression -> TL.Text
