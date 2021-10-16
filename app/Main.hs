@@ -14,7 +14,9 @@ import qualified Data.Text.Lazy.IO as TIO
 import           System.IO          ( stderr )
 import           System.Environment ( getArgs )
 
+import           Data.PQL.Output ( formatCSV )
 import           Data.PQL.Parser
+import           Data.PQL.Types
 
 
 main :: IO ()
@@ -33,7 +35,7 @@ convert lines =
   handle line =
     case parse line of
       Right success ->
-        TIO.putStrLn $ format success
+        TIO.putStrLn $ formatCSV success
       Left msg ->
         let err  = TL.pack msg
             err' = "FAILED: " <> err <> ": " <> line
