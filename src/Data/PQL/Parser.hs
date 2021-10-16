@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Data.PQL.PQL
+module Data.PQL.Parser
     ( parse
     , format
     , explode

@@ -24,7 +24,7 @@ source-repository head
 
 library
   exposed-modules:
-      Data.PQL.PQL
+      Data.PQL.Parser
   other-modules:
       Paths_pqlparse
   hs-source-dirs:

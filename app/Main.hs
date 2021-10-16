@@ -14,7 +14,7 @@ import qualified Data.Text.Lazy.IO as TIO
 import           System.IO          ( stderr )
 import           System.Environment ( getArgs )
 
-import           Data.PQL.PQL
+import           Data.PQL.Parser
 
 
 main :: IO ()
