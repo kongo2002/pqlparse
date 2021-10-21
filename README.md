@@ -3,19 +3,19 @@
 
 ## Usage
 
-You can build and run `pqlparse` using either `stack` or `cabal` (see below). In
-general `pqlparse` reads PQL-like input from stdin.
+You can build and run `pqlparse` using either [stack][stack] or [cabal][cabal]
+(see below). In general `pqlparse` reads PQL-like input from stdin.
 
 You can parse PQL input like:
 
-```
+```shell
 $ echo "foo is 'foo' and bar gt 42" | stack run
 bar gt 9.0 and foo is 'foo'
 ```
 
 You can also simplify PQL expressions like:
 
-```
+```shell
 $ stack run -- -r <<EOF
 /foo,category is 'foo' or path is '/bar'
 /bar,category is 'bar' and price gt 34
@@ -45,3 +45,7 @@ EOF
 ### Cabal
 
     $ cabal test
+
+
+[cabal]: https://www.haskell.org/cabal/
+[stack]: https://www.haskellstack.org/
