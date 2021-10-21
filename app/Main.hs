@@ -16,6 +16,7 @@ import           System.Environment ( getArgs )
 import           System.Exit        ( exitFailure, exitSuccess )
 import           System.IO          ( hPutStrLn, stderr )
 
+import           Data.PQL.Operation
 import           Data.PQL.Output ( formatCSV, formatJSON )
 import           Data.PQL.Parser
 import           Data.PQL.Types

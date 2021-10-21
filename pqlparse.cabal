@@ -24,6 +24,7 @@ source-repository head
 
 library
   exposed-modules:
+      Data.PQL.Operation
       Data.PQL.Output
       Data.PQL.Parser
       Data.PQL.Types
@@ -55,6 +56,7 @@ test-suite pqlparse-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      OperationSpec
       OutputSpec
       ParseSpec
       Paths_pqlparse
