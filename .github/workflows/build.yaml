@@ -18,6 +18,19 @@ jobs:
         uses: haskell/actions/setup@v1
         with:
           ghc-version: ${{ matrix.ghc }}
+      - name: test
+        run: cabal test
+      - name: build
+        run: cabal build
+  stack:
+    name: test and build (stack)
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: setup haskell
+        uses: haskell/actions/setup@v1
+        with:
           enable-stack: true
           stack-version: 'latest'
           stack-setup-ghc: true
