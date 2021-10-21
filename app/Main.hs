@@ -5,11 +5,10 @@ module Main where
 
 import           Control.Monad      ( forM_, (>=>) )
 import           Data.Maybe         ( fromMaybe, mapMaybe )
-import           Data.List          ( intersperse, nub )
+import           Data.List          ( nub )
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Text.Lazy.IO as TIO
 import           System.Console.GetOpt
 import           System.Environment ( getArgs )
@@ -17,7 +16,7 @@ import           System.Exit        ( exitFailure, exitSuccess )
 import           System.IO          ( hPutStrLn, stderr )
 
 import           Data.PQL.Operation
-import           Data.PQL.Output ( formatCSV, formatJSON )
+import           Data.PQL.Output
 import           Data.PQL.Parser
 import           Data.PQL.Types
 

@@ -5,14 +5,13 @@ module Data.PQL.Parser
     ) where
 
 
-import           Control.Applicative
-import           Control.Monad ( when, unless )
-import           Data.Char     ( isAlphaNum )
-import           Data.Monoid   ( (<>), mconcat )
-import           Data.Functor  ( ($>) )
-import           Data.List     ( sortBy )
+import           Control.Applicative ( (<|>) )
+import           Control.Monad       ( when )
+import           Data.Char           ( isAlphaNum )
+import           Data.Monoid         ( (<>), mconcat )
+import           Data.Functor        ( ($>) )
+import           Data.List           ( sortBy )
 import qualified Data.Attoparsec.Text.Lazy as AL
-import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 
 import Data.PQL.Operation
