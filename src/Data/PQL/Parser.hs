@@ -30,18 +30,18 @@ data Comb = CAnd | COr deriving ( Eq )
 -- into:
 --
 --   (a OR c) AND (b OR c)
-explode0 :: Expression -> Expression
-explode0 (Or vs)  = explodeOr vs
-explode0 (And vs) = And (map explode0 vs)
-explode0 expr     = expr
-
-
 explode :: Expression -> Expression
 explode expr
   | expr /= expr0 = explode expr0
   | otherwise     = expr0
  where
   expr0 = explode0 expr
+
+
+explode0 :: Expression -> Expression
+explode0 (Or vs)  = explodeOr vs
+explode0 (And vs) = And (map explode0 vs)
+explode0 expr     = expr
 
 
 explodeOr :: [Expression] -> Expression
@@ -106,6 +106,14 @@ order (Or as)  = Or (sortBy orderValue as)
 order cond     = cond
 
 
+simplify :: Expression -> Expression
+simplify expr
+  | expr /= expr0 = simplify expr0
+  | otherwise     = expr0
+ where
+  expr0 = simplify0 expr
+
+
 simplify0 :: Expression -> Expression
 simplify0 c@Cond {} = c
 simplify0 (And vs) =
@@ -116,14 +124,6 @@ simplify0 (Or vs) =
   let collect (Or os) xs = os ++ xs
       collect x xs       = simplify0 x : xs
   in Or $ foldr collect [] vs
-
-
-simplify :: Expression -> Expression
-simplify expr
-  | expr /= expr0 = simplify expr0
-  | otherwise     = expr0
- where
-  expr0 = simplify0 expr
 
 
 group :: AL.Parser Expression

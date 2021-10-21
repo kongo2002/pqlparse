@@ -55,6 +55,7 @@ test-suite pqlparse-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      OutputSpec
       ParseSpec
       Paths_pqlparse
   hs-source-dirs:
@@ -64,4 +65,5 @@ test-suite pqlparse-test
       base >=4.7 && <5
     , hspec
     , pqlparse
+    , text
   default-language: Haskell2010
