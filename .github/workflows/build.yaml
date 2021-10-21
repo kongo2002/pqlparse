@@ -18,8 +18,8 @@ jobs:
         uses: haskell/actions/setup@v1
         with:
           ghc-version: ${{ matrix.ghc }}
-      - name: install hspec
-        run: cabal install hspec
+      - name: install hspec-discover
+        run: cabal install hspec-discover
       - name: test
         run: cabal test
       - name: build
