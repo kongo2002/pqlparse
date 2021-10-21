@@ -1,5 +1,7 @@
 # pqlparse
 
+![pqlparse](https://github.com/kongo2002/pqlparse/actions/workflows/build.yaml/badge.svg)
+
 
 ## Usage
 
