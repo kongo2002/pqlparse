@@ -26,6 +26,21 @@ EOF
 /foo,(category is 'bar' or category is 'foo') and (price gt 34.0 or category is 'foo')
 ```
 
+Output can be either in CSV (default) or JSON:
+
+```shell
+$ echo "category is 'ham & eggs'" | stack run -- -o json | jq .
+[
+  {
+    "attr": "category",
+    "value": "ham & eggs",
+    "compare": "=",
+    "type": "string",
+    "children": []
+  }
+]
+```
+
 
 ## Build
 
