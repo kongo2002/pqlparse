@@ -44,6 +44,25 @@ spec = do
     it "OR of ANDs #2" $
       explode' "foo is 9 or (bar gt 10 and bar lt 20 and ham gt 30)" `shouldBe` Right (And [Or [Cond "bar" Greater (Num 10), Cond "foo" Is (Num 9)], Or [Cond "bar" Less (Num 20), Cond "foo" Is (Num 9)], Or [Cond "ham" Greater (Num 30), Cond "foo" Is (Num 9)]])
 
+  describe "invert" $ do
+    it "is" $
+      invert' "foo is 9" `shouldBe` Right (Cond "foo" IsNot (Num 9))
+
+    it "isnot" $
+      invert' "foo isnot 9" `shouldBe` Right (Cond "foo" Is (Num 9))
+
+    it "gt" $
+      invert' "foo gt 9" `shouldBe` Right (Cond "foo" LessTE (Num 9))
+
+    it "lte" $
+      invert' "foo lte 9" `shouldBe` Right (Cond "foo" Greater (Num 9))
+
+    it "and" $
+      invert' "foo lte 9 and bar is 'bar'" `shouldBe` Right (Or [Cond "bar" IsNot (Val "bar"), Cond "foo" Greater (Num 9)])
+
+    it "or" $
+      invert' "foo gt 9 or bar isnot 'bar'" `shouldBe` Right (And [Cond "bar" Is (Val "bar"), Cond "foo" LessTE (Num 9)])
+
 
 simplify' :: TL.Text -> Either String Expression
 simplify' input = simplify `fmap` parse input
@@ -51,3 +70,7 @@ simplify' input = simplify `fmap` parse input
 
 explode' :: TL.Text -> Either String Expression
 explode' input = explode `fmap` parse input
+
+
+invert' :: TL.Text -> Either String Expression
+invert' input = invert `fmap` parse input

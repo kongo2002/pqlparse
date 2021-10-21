@@ -3,12 +3,28 @@
 module Data.PQL.Operation
   ( simplify
   , explode
+  , invert
   ) where
 
 
 import Data.List     ( partition )
 
 import Data.PQL.Types
+
+
+invert :: Expression -> Expression
+invert (Cond attr op val) = Cond attr (invertOp op) val
+invert (And as)           = Or (map invert as)
+invert (Or os)            = And (map invert os)
+
+
+invertOp :: Op -> Op
+invertOp Is        = IsNot
+invertOp IsNot     = Is
+invertOp Greater   = LessTE
+invertOp GreaterTE = Less
+invertOp Less      = GreaterTE
+invertOp LessTE    = Greater
 
 
 simplify :: Expression -> Expression

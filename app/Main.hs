@@ -212,6 +212,8 @@ tryResolve :: Expression
 tryResolve x@(Cond attr op (Val v)) m
   | attr == pathAttr && op == Is =
     tryResolve' v x m
+  | attr == pathAttr && op == IsNot =
+    tryResolveInv' v x m
   | otherwise = x
 
 tryResolve (And vs) m =
@@ -230,6 +232,14 @@ tryResolve' path cond m =
   fromMaybe cond $ M.lookup path' m
  where
   path' = pathName path
+
+
+tryResolveInv' :: T.Text -> Expression -> M.Map T.Text Expression -> Expression
+tryResolveInv' path cond m =
+  maybe cond invert lookup
+ where
+  path' = pathName path
+  lookup = M.lookup path' m
 
 
 pathName :: T.Text -> T.Text
