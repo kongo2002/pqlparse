@@ -4,7 +4,8 @@ module ParseSpec ( spec ) where
 
 import Test.Hspec
 
-import Data.PQL.PQL
+import Data.PQL.Parser
+import Data.PQL.Types
 
 
 spec :: Spec

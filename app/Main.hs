@@ -186,9 +186,7 @@ resolve lines format =
       _ -> Nothing
 
   output (path, cond) =
-    TIO.putStrLn $ format path cond'
-   where
-    cond' = simplify' cond
+    TIO.putStrLn $ format path cond
 
 
 simplify' expr
