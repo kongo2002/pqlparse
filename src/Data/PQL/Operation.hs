@@ -7,7 +7,7 @@ module Data.PQL.Operation
   ) where
 
 
-import Data.List     ( partition )
+import Data.List ( nub, partition )
 
 import Data.PQL.Types
 
@@ -38,13 +38,15 @@ simplify expr
 simplify0 :: Expression -> Expression
 simplify0 c@Cond {} = c
 simplify0 (And vs) =
-  let collect (And as) xs = as ++ xs
-      collect x xs        = simplify0 x : xs
-  in And $ foldr collect [] vs
+  let collect (And as) xs    = as ++ xs
+      collect (Or [cond]) xs = simplify0 cond : xs
+      collect x xs           = simplify0 x : xs
+  in And $ nub $ foldr collect [] vs
 simplify0 (Or vs) =
-  let collect (Or os) xs = os ++ xs
-      collect x xs       = simplify0 x : xs
-  in Or $ foldr collect [] vs
+  let collect (Or os) xs      = os ++ xs
+      collect (And [cond]) xs = simplify0 cond : xs
+      collect x xs            = simplify0 x : xs
+  in Or $ nub $ foldr collect [] vs
 
 
 -- we want so explode expressions like these:

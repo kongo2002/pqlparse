@@ -34,6 +34,12 @@ spec = do
     it "deep nested ORs" $
       simplify' "foo is 9 or (foo is 10 or (foo is 11))" `shouldBe` Right (Or [Cond "foo" Is (Num 9), Cond "foo" Is (Num 10), Cond "foo" Is (Num 11)])
 
+    it "duplicate expressions #1" $
+      simplify' "foo is 9 or (bar gt 10 and bar lte 20) or 9 is foo" `shouldBe` Right (Or [Cond "foo" Is (Num 9.0), And [Cond "bar" Greater (Num 10.0), Cond "bar" LessTE (Num 20.0)]])
+
+    it "duplicate expressions #2" $
+      simplify' "foo is 9 or (bar gt 10 and 10 lte bar) or 9 is foo" `shouldBe` Right (Or [Cond "bar" Greater (Num 10.0), Cond "foo" Is (Num 9.0)])
+
   describe "explode" $ do
     it "noop" $
       explode' "foo is 9" `shouldBe` Right (Cond "foo" Is (Num 9))
