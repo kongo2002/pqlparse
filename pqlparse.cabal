@@ -26,6 +26,7 @@ library
   exposed-modules:
       Data.PQL.Operation
       Data.PQL.Output
+      Data.PQL.Output.Filters
       Data.PQL.Parser
       Data.PQL.Types
   other-modules:

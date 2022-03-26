@@ -21,7 +21,7 @@ import           Data.PQL.Parser
 import           Data.PQL.Types
 
 
-type Formatter = T.Text -> Expression -> TL.Text
+type Formatter = T.Text -> Expression -> Maybe TL.Text
 
 
 data Options = Options
@@ -40,24 +40,38 @@ defOptions = Options
 
 
 toCSV :: Formatter
-toCSV name expr
-  | T.null name = formatCSV expr
+toCSV name expr =
+  pure toCSV'
+ where
+  toCSV'
+    | T.null name = formatCSV expr
+    | otherwise =
+      TL.fromStrict name <> "," <> formatCSV expr
+
+
+toFilters :: Formatter
+toFilters name expr
+  | T.null name = formatFilters expr
   | otherwise =
-    TL.fromStrict name <> "," <> formatCSV expr
+    let toLine formatted = TL.fromStrict name <> "," <> formatted
+    in  toLine `fmap` formatFilters expr
 
 
 toJSON :: Formatter
-toJSON name expr
-  | T.null name = formatJSON expr
-  | otherwise =
-    "{\"id\":\"" <> TL.fromStrict name <> "\",\"queries\":" <> formatJSON expr <> "}"
+toJSON name expr =
+  pure toJSON'
+ where
+  toJSON'
+    | T.null name = formatJSON expr
+    | otherwise =
+      "{\"id\":\"" <> TL.fromStrict name <> "\",\"queries\":" <> formatJSON expr <> "}"
 
 
 options :: [ OptDescr (Options -> IO Options) ]
 options =
   [ Option "o" ["output"]
     (ReqArg (\fmt opt -> return $ opt { oOutputFormat = fmt }) "FORMAT")
-    "output format"
+    "output format [csv,json,filters]"
   , Option "r" ["resolve"]
     (NoArg (\opt -> return opt { oResolve = True }))
     "resolve path expressions"
@@ -92,6 +106,7 @@ parseOpts args =
   validateOpts opts
     | fmt == "json" = return $ opts { oOutput = toJSON }
     | fmt == "csv" = return $ opts { oOutput = toCSV }
+    | fmt == "filters" = return $ opts { oOutput = toFilters }
     | otherwise = err $ "invalid output: " ++ fmt
    where
     fmt = oOutputFormat opts
@@ -113,7 +128,7 @@ convert lines output =
   handle line =
     case parse line of
       Right success ->
-        TIO.putStrLn $ output "" success
+        printIf output "" success
       Left msg ->
         let err  = TL.pack msg
             err' = "FAILED: " <> err <> ": " <> line
@@ -186,7 +201,14 @@ resolve lines format =
       _ -> Nothing
 
   output (path, cond) =
-    TIO.putStrLn $ format path cond
+    printIf format path cond
+
+
+printIf :: Formatter -> T.Text -> Expression -> IO ()
+printIf formatter name expr =
+  case formatter name expr of
+    Just output -> TIO.putStrLn output
+    Nothing -> return ()
 
 
 simplify' expr

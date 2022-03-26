@@ -3,6 +3,7 @@
 module Data.PQL.Output
   ( formatCSV
   , formatJSON
+  , formatFilters
   ) where
 
 
@@ -11,6 +12,20 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
 
 import Data.PQL.Types
+import Data.PQL.Output.Filters
+
+
+formatFilters :: Expression -> Maybe TL.Text
+formatFilters expr =
+  formatFilters' `fmap` collectFilters expr
+ where
+  format = mconcat . intersperse ";" . map TLB.fromText
+  formatFilters' filters =
+    let categories = format $ fCategories filters
+        brands = format $ fBrands filters
+        colors = format $ fColors filters
+        parts = mconcat $ intersperse "," [categories, brands, colors]
+    in  TLB.toLazyText parts
 
 
 formatJSON :: Expression -> TL.Text
